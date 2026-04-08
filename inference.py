@@ -4,28 +4,21 @@ from __future__ import annotations
 
 import asyncio
 import json
-import os
 from dataclasses import dataclass
 from typing import Any, List, Optional
 
 from openai import OpenAI
 
 from client import SupermailEnv
+from env import API_BASE_URL, API_KEY, BASE_URL, BENCHMARK, IMAGE_NAME, MODEL_NAME, TASK_NAME
 from models import SupportAction, SupportObservation
 from server.environment import SupermailEnvironment
 from sys_prompt import SYSTEM_PROMPT
 from tasks import ALL_TASKS, TASKS_BY_ID
 
-IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME") or os.getenv("IMAGE_NAME")
-BASE_URL = os.getenv("SUPERMAIL_BASE_URL") or os.getenv("SUPPORT_SIM_BASE_URL")
-API_KEY = os.getenv("HF_TOKEN") or os.getenv("API_KEY")
-API_BASE_URL = os.getenv("API_BASE_URL") or "https://router.huggingface.co/v1"
-MODEL_NAME = os.getenv("MODEL_NAME") or "Qwen/Qwen2.5-72B-Instruct"
-TASK_NAME = os.getenv("SUPERMAIL_TASK") or os.getenv("SUPPORT_SIM_TASK", "all")
-BENCHMARK = os.getenv("SUPERMAIL_BENCHMARK") or os.getenv("SUPPORT_SIM_BENCHMARK", "supermail")
-MAX_STEPS = 8
-TEMPERATURE = 0.0
-MAX_TOKENS = 250
+MAX_STEPS = 12
+TEMPERATURE = 0.4
+MAX_TOKENS = 25000
 SUCCESS_SCORE_THRESHOLD = 0.95
 
 @dataclass
