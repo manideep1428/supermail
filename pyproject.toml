@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "supermail-env"
+version = "1.0.0"
+description = "Deterministic customer support email triage environment for OpenEnv."
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.115.0",
+    "openai>=1.40.0",
+    "openenv-core[core]>=0.2.3",
+    "uvicorn>=0.24.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.0.0",
+]
+
+[project.scripts]
+server = "play.server.app:main"
+
+[tool.setuptools]
+include-package-data = true
+packages = ["play", "play.server", "play.tasks"]
+package-dir = { "play" = ".", "play.server" = "server", "play.tasks" = "tasks" }
