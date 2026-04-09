@@ -37,6 +37,8 @@ class SupermailEnvironment(Environment):
     """Deterministic customer support email triage environment."""
 
     SUPPORTS_CONCURRENT_SESSIONS: bool = True
+    MIN_SCORE: float = 0.01
+    MAX_SCORE: float = 0.99
 
     def __init__(self, task_id: str | None = None):
         self._requested_task_id = task_id
@@ -45,8 +47,12 @@ class SupermailEnvironment(Environment):
         self._task: TaskDefinition | None = None
         self._matched_fields: set[str] = set()
         self._history: list[str] = []
-        self._score = 0.0
-        self._state = SupportState(episode_id=str(uuid4()), step_count=0)
+        self._score = self._bounded_score(0.0)
+        self._state = SupportState(
+            episode_id=str(uuid4()),
+            step_count=0,
+            score=self._score,
+        )
 
     @property
     def benchmark(self) -> str:
@@ -65,13 +71,13 @@ class SupermailEnvironment(Environment):
         self._task = self._select_task()
         self._matched_fields = set()
         self._history = []
-        self._score = 0.0
+        self._score = self._bounded_score(0.0)
         self._state = SupportState(
             episode_id=str(uuid4()),
             step_count=0,
             task_id=self._task.task_id,
             difficulty=self._task.difficulty,
-            score=0.0,
+            score=self._score,
             matched_fields=[],
             attempts_remaining=self._task.max_attempts,
         )
@@ -143,6 +149,14 @@ class SupermailEnvironment(Environment):
                 decision[field_name] = value
         return decision
 
+    def _bounded_score(self, raw_score: float) -> float:
+        """Map raw progress into the open interval (0, 1)."""
+        clamped_raw_score = min(max(raw_score, 0.0), 1.0)
+        scaled_score = self.MIN_SCORE + (
+            clamped_raw_score * (self.MAX_SCORE - self.MIN_SCORE)
+        )
+        return round(scaled_score, 2)
+
     def _assess(self, decision: dict[str, str]) -> StepAssessment:
         if self._task is None:
             raise RuntimeError("Task not initialized.")
@@ -186,13 +200,8 @@ class SupermailEnvironment(Environment):
         if self._state.step_count > 3 and matched_fields != set(self._task.required_fields):
             reward -= 0.05
 
-        score = round(
-            min(
-                1.0,
-                sum(self._task.field_weights[field] for field in matched_fields),
-            ),
-            2,
-        )
+        raw_score = sum(self._task.field_weights[field] for field in matched_fields)
+        score = self._bounded_score(raw_score)
 
         success = matched_fields == set(self._task.required_fields)
         done = success or self._state.step_count >= self._task.max_attempts

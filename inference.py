@@ -4,22 +4,41 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 from dataclasses import dataclass
 from typing import Any, List, Optional
 
 from openai import OpenAI
 
+try:
+    from dotenv import load_dotenv
+except ImportError:  # pragma: no cover
+    def load_dotenv() -> bool:
+        return False
+
 from client import SupermailEnv
-from env import API_BASE_URL, API_KEY, BASE_URL, BENCHMARK, IMAGE_NAME, MODEL_NAME, TASK_NAME
 from models import SupportAction, SupportObservation
 from server.environment import SupermailEnvironment
 from sys_prompt import SYSTEM_PROMPT
 from tasks import ALL_TASKS, TASKS_BY_ID
 
+load_dotenv()
+
+API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
+MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
+HF_TOKEN = os.getenv("HF_TOKEN")
+LOCAL_IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME")
+
+BASE_URL = os.getenv("SUPERMAIL_BASE_URL") or os.getenv("SUPPORT_SIM_BASE_URL")
+TASK_NAME = os.getenv("SUPERMAIL_TASK") or os.getenv("SUPPORT_SIM_TASK", "all")
+BENCHMARK = os.getenv("SUPERMAIL_BENCHMARK") or os.getenv("SUPPORT_SIM_BENCHMARK", "supermail")
+
 MAX_STEPS = 12
 TEMPERATURE = 0.4
 MAX_TOKENS = 25000
 SUCCESS_SCORE_THRESHOLD = 0.95
+MIN_SCORE = 0.01
+MAX_SCORE = 0.99
 
 @dataclass
 class LocalStepResult:
@@ -63,8 +82,8 @@ def sanitize(value: Any) -> str:
 
 
 def clamp_score(score: float) -> float:
-    """Clamp score into [0, 1]."""
-    return min(max(score, 0.0), 1.0)
+    """Clamp score into the open interval (0, 1)."""
+    return min(max(score, MIN_SCORE), MAX_SCORE)
 
 
 def compact_action(action: Optional[SupportAction]) -> str:
@@ -114,9 +133,9 @@ def log_end(*, success: bool, steps: int, score: float, rewards: List[float]) ->
 
 def build_client() -> Optional[OpenAI]:
     """Create an OpenAI client when credentials are available."""
-    if not API_KEY:
+    if not HF_TOKEN:
         return None
-    return OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+    return OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN)
 
 
 def heuristic_action(observation: SupportObservation) -> SupportAction:
@@ -241,9 +260,9 @@ def choose_action(
 
 async def create_env(task_id: str):
     """Create the environment session using docker, base URL, or local fallback."""
-    if IMAGE_NAME:
+    if LOCAL_IMAGE_NAME:
         return await SupermailEnv.from_docker_image(
-            IMAGE_NAME,
+            LOCAL_IMAGE_NAME,
             env_vars={"SUPERMAIL_TASK": task_id},
         )
 
@@ -264,7 +283,7 @@ async def run_episode(task_id: str, client: Optional[OpenAI]) -> None:
     history: List[str] = []
     rewards: List[float] = []
     steps_taken = 0
-    score = 0.0
+    score = MIN_SCORE
     success = False
     action_for_log: Optional[SupportAction] = None
 

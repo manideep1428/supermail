@@ -298,16 +298,17 @@ It reads:
 
 - `API_BASE_URL` with default `https://router.huggingface.co/v1`
 - `MODEL_NAME` with default `Qwen/Qwen2.5-72B-Instruct`
-- `HF_TOKEN` or `API_KEY`
-- `SUPERMAIL_TASK`, `SUPERMAIL_BASE_URL`, and optional `LOCAL_IMAGE_NAME` / `IMAGE_NAME`
+- `HF_TOKEN` with no default
+- optional `LOCAL_IMAGE_NAME` when using `from_docker_image()`
+- `SUPERMAIL_TASK`, `SUPERMAIL_BASE_URL`
 
 When an OpenAI-compatible endpoint is available, the script uses the OpenAI client for action generation. If the request fails, it falls back to a deterministic heuristic so the baseline remains reproducible on the bundled tasks.
 
 Deterministic fallback baseline on bundled tasks:
 
-- `email_easy`: `1.00`
-- `email_medium`: `1.00`
-- `email_hard`: `1.00`
+- `email_easy`: `0.99`
+- `email_medium`: `0.99`
+- `email_hard`: `0.99`
 
 ## Hugging Face Spaces
 

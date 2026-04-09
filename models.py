@@ -77,7 +77,7 @@ class SupportObservation(Observation):
         description="Compact summaries of prior attempts in the episode.",
     )
     feedback: str = Field(default="", description="Step-level grader feedback.")
-    score: float = Field(default=0.0, description="Current cumulative score.")
+    score: float = Field(default=0.01, description="Current cumulative score.")
     attempts_remaining: int = Field(
         default=0,
         description="How many attempts remain before the episode ends.",
@@ -89,6 +89,6 @@ class SupportState(State):
 
     task_id: str | None = None
     difficulty: str | None = None
-    score: float = 0.0
+    score: float = 0.01
     matched_fields: List[str] = Field(default_factory=list)
     attempts_remaining: int = 0
